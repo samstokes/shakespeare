@@ -1,6 +1,8 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Text.Hamlet.Javascript where
 
@@ -34,16 +36,15 @@ docToExp :: Doc -> Q Exp
 docToExp (DocContent c) = contentToExp c
 
 contentToExp :: Content -> Q Exp
-contentToExp (ContentRaw s) = [|"document.write(\"" ++ escapearoo s ++ "\");"|]
+contentToExp (ContentRaw s) = [|jsWriteVal s|]
 contentToExp (ContentVar d) = derefToExp d
 
 derefToExp :: Deref -> Q Exp
-derefToExp (DerefIntegral i) = [|"document.write(" ++ show i ++ ");"|]
-derefToExp (DerefString s) = [|"document.write(\"" ++ escapearoo s ++ "\");"|]
+derefToExp (DerefIntegral i) = [|jsWriteVal i|]
+derefToExp (DerefString s) = [|jsWriteVal s|]
 
 
 -- TODO probably shouldn't write my own escaping function
--- TODO and it probably should use a typeclass
 escapearoo :: String -> String
 escapearoo = foldr1 (.) replacers
   where
@@ -59,3 +60,18 @@ replace c rep s = reverse $ go c (reverse rep) s []
     go _ _ [] accum = accum
     go c rep (i : is) accum | c == i    = go c rep is $ rep ++ accum
                             | otherwise = go c rep is $ i : accum
+
+jsQuote :: String -> String
+jsQuote = ('"' :) . (++ "\"")
+
+class ToJsVal a where
+  toJsVal :: a -> String
+
+  jsWriteVal :: a -> String
+  jsWriteVal x = "document.write(" ++ toJsVal x ++ ");"
+
+instance ToJsVal [Char] where
+  toJsVal = jsQuote . escapearoo
+
+instance ToJsVal Integer where
+  toJsVal = show
