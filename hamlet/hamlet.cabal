@@ -65,6 +65,7 @@ library
 
     exposed-modules: Text.Hamlet
                      Text.Hamlet.RT
+                     Text.Hamlet.Javascript
     other-modules:   Text.Hamlet.Parse
     ghc-options:     -Wall
     if impl(ghc >= 7.4)
