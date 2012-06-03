@@ -5,7 +5,7 @@
 module Text.Hamlet.Javascript where
 
 import Text.Hamlet.Parse
-import Text.Shakespeare.Base
+import Text.Shakespeare.Base (Deref(..), Ident(..))
 import Data.Monoid (mconcat)
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
@@ -35,11 +35,11 @@ docToExp (DocContent c) = contentToExp c
 
 contentToExp :: Content -> Q Exp
 contentToExp (ContentRaw s) = [|"document.write(\"" ++ escapearoo s ++ "\");"|]
-contentToExp (ContentVar d) = derefToJavascript d
+contentToExp (ContentVar d) = derefToExp d
 
-derefToJavascript :: Deref -> Q Exp
-derefToJavascript (DerefIntegral i) = [|"document.write(" ++ show i ++ ");"|]
-derefToJavascript (DerefString s) = [|"document.write(\"" ++ escapearoo s ++ "\");"|]
+derefToExp :: Deref -> Q Exp
+derefToExp (DerefIntegral i) = [|"document.write(" ++ show i ++ ");"|]
+derefToExp (DerefString s) = [|"document.write(\"" ++ escapearoo s ++ "\");"|]
 
 
 -- TODO probably shouldn't write my own escaping function
