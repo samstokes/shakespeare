@@ -7,7 +7,7 @@
 module Text.Hamlet.Javascript where
 
 import Text.Hamlet.Parse
-import Text.Shakespeare.Base (Deref(..), Ident(..))
+import Text.Shakespeare.Base (Deref(..))
 import Data.Monoid (mconcat)
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
