@@ -7,7 +7,7 @@
 module Text.Hamlet.Javascript where
 
 import Text.Hamlet.Parse
-import Text.Shakespeare.Base (Deref(..), Ident(..))
+import Text.Shakespeare.Base (Deref(..))
 import Data.Monoid (mconcat)
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
@@ -44,6 +44,17 @@ derefToExp (DerefIntegral i) = [|jsWriteVal i|]
 derefToExp (DerefString s) = [|jsWriteVal s|]
 
 
+data JsVal = JsString { unJsString :: String }
+           | JsNum { unJsNum :: Float }
+
+class Js j where
+  renderJs :: j -> String
+
+instance Js JsVal where
+  renderJs (JsString s) = jsQuote $ escapearoo s
+  renderJs (JsNum n) = show n
+
+
 -- TODO probably shouldn't write my own escaping function
 escapearoo :: String -> String
 escapearoo = foldr1 (.) replacers
@@ -65,13 +76,17 @@ jsQuote :: String -> String
 jsQuote = ('"' :) . (++ "\"")
 
 class ToJsVal a where
-  toJsVal :: a -> String
+  toJsVal :: a -> JsVal
 
   jsWriteVal :: a -> String
-  jsWriteVal x = "document.write(" ++ toJsVal x ++ ");"
+  jsWriteVal = jsWrite . toJsVal
 
 instance ToJsVal [Char] where
-  toJsVal = jsQuote . escapearoo
+  toJsVal = JsString
 
 instance ToJsVal Integer where
-  toJsVal = show
+  toJsVal = JsNum . fromIntegral
+
+jsWrite :: Js j => j -> String
+jsWrite = wrapDocWrite . renderJs
+  where wrapDocWrite = ("document.write(" ++) . (++ ");")
