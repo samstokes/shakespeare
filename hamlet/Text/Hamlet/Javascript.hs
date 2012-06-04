@@ -13,16 +13,16 @@ import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 
 jhamlet :: QuasiQuoter
-jhamlet = QuasiQuoter { quoteExp = jhamletFromString }
+jhamlet = QuasiQuoter { quoteExp = jhamletFromString "render" "context" }
 
-jhamletFromString :: String -> Q Exp
-jhamletFromString s = case parseDoc settings s of
+jhamletFromString :: String -> String -> String -> Q Exp
+jhamletFromString functionName contextName s = case parseDoc settings s of
     Error s' -> error s'
-    Ok d -> wrapFunction "render" $ docsToExp d
+    Ok d -> wrapFunction functionName contextName $ docsToExp contextName d
   where settings = debugHamletSettings -- TODO
 
-wrapFunction :: String -> Q Exp -> Q Exp
-wrapFunction functionName js = [|"function " ++ functionName ++ "() {" ++ $js ++ "}"|]
+wrapFunction :: String -> String -> Q Exp -> Q Exp
+wrapFunction functionName contextName js = [|"function " ++ functionName ++ "(" ++ contextName ++ ") {" ++ $js ++ "}"|]
 
 docsToExp :: [Doc] -> Q Exp
 docsToExp docs = do
@@ -32,20 +32,22 @@ docsToExp docs = do
     [x] -> return x
     _ -> [|mconcat $(return $ ListE exps)|]
 
-docToExp :: Doc -> Q Exp
-docToExp (DocContent c) = contentToExp c
+docToExp :: String -> Doc -> Q Exp
+docToExp contextName (DocContent c) = contentToExp contextName c
 
-contentToExp :: Content -> Q Exp
-contentToExp (ContentRaw s) = [|jsWriteVal s|]
-contentToExp (ContentVar d) = derefToExp d
+contentToExp :: String -> Content -> Q Exp
+contentToExp _ (ContentRaw s) = [|jsWriteVal s|]
+contentToExp contextName (ContentVar d) = derefToExp contextName d
 
-derefToExp :: Deref -> Q Exp
-derefToExp (DerefIntegral i) = [|jsWriteVal i|]
-derefToExp (DerefString s) = [|jsWriteVal s|]
+derefToExp :: String -> Deref -> Q Exp
+derefToExp contextName (DerefIdent (Ident i)) = [|jsWrite $ JsIdent $ contextName ++ "." ++ i|]
+derefToExp _ (DerefIntegral i) = [|jsWriteVal i|]
+derefToExp _ (DerefString s) = [|jsWriteVal s|]
 
 
 data JsVal = JsString { unJsString :: String }
            | JsNum { unJsNum :: Float }
+newtype JsIdent = JsIdent { unJsIdent :: String }
 
 class Js j where
   renderJs :: j -> String
@@ -53,6 +55,9 @@ class Js j where
 instance Js JsVal where
   renderJs (JsString s) = jsQuote $ escapearoo s
   renderJs (JsNum n) = show n
+
+instance Js JsIdent where
+  renderJs (JsIdent i) = i
 
 
 -- TODO probably shouldn't write my own escaping function
