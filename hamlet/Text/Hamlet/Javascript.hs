@@ -47,12 +47,12 @@ docToExp contextName (DocContent c) = contentToExp contextName c
 
 contentToExp :: String -> Content -> Q Exp
 contentToExp _ (ContentRaw s) = [|jsWriteLit s|]
-contentToExp contextName (ContentVar d) = derefToExp contextName d
+contentToExp contextName (ContentVar d) = [|jsWrite $(derefToExp contextName d)|]
 
 derefToExp :: String -> Deref -> Q Exp
-derefToExp contextName (DerefIdent (Ident i)) = [|jsWrite $ JsIdent $ contextName ++ "." ++ i|]
-derefToExp _ (DerefIntegral i) = [|jsWriteLit i|]
-derefToExp _ (DerefString s) = [|jsWriteLit s|]
+derefToExp contextName (DerefIdent (Ident i)) = [|JsIdent $ contextName ++ "." ++ i|]
+derefToExp _ (DerefIntegral i) = [|toJsLit i|]
+derefToExp _ (DerefString s) = [|toJsLit s|]
 
 
 data JsLit = JsString { unJsString :: String }
