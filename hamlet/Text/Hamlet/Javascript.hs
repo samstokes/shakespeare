@@ -21,6 +21,14 @@ jhamletFromString functionName contextName s = case parseDoc settings s of
     Ok d -> wrapFunction functionName contextName $ docsToExp contextName d
   where settings = debugHamletSettings -- TODO
 
+jhamletFile :: FilePath -> String -> String -> Q Exp
+jhamletFile fp functionName contextName = do
+#ifdef GHC_7_4
+    qAddDependentFile fp
+#endif
+    contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
+    jhamletFromString functionName contextName contents
+
 wrapFunction :: String -> String -> Q Exp -> Q Exp
 wrapFunction functionName contextName js = [|"function " ++ functionName ++ "(" ++ contextName ++ ") {" ++ $js ++ "}"|]
 
