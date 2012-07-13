@@ -44,23 +44,23 @@ docToExp :: String -> Doc -> Q Exp
 docToExp contextName (DocContent c) = contentToExp contextName c
 
 contentToExp :: String -> Content -> Q Exp
-contentToExp _ (ContentRaw s) = [|jsWriteVal s|]
+contentToExp _ (ContentRaw s) = [|jsWriteLit s|]
 contentToExp contextName (ContentVar d) = derefToExp contextName d
 
 derefToExp :: String -> Deref -> Q Exp
 derefToExp contextName (DerefIdent (Ident i)) = [|jsWrite $ JsIdent $ contextName ++ "." ++ i|]
-derefToExp _ (DerefIntegral i) = [|jsWriteVal i|]
-derefToExp _ (DerefString s) = [|jsWriteVal s|]
+derefToExp _ (DerefIntegral i) = [|jsWriteLit i|]
+derefToExp _ (DerefString s) = [|jsWriteLit s|]
 
 
-data JsVal = JsString { unJsString :: String }
+data JsLit = JsString { unJsString :: String }
            | JsNum { unJsNum :: Float }
 newtype JsIdent = JsIdent { unJsIdent :: String }
 
 class Js j where
   renderJs :: j -> String
 
-instance Js JsVal where
+instance Js JsLit where
   renderJs (JsString s) = jsQuote $ escapearoo s
   renderJs (JsNum n) = show n
 
@@ -88,17 +88,17 @@ replace c rep s = reverse $ go c (reverse rep) s []
 jsQuote :: String -> String
 jsQuote = ('"' :) . (++ "\"")
 
-class ToJsVal a where
-  toJsVal :: a -> JsVal
+class ToJsLit a where
+  toJsLit :: a -> JsLit
 
-  jsWriteVal :: a -> String
-  jsWriteVal = jsWrite . toJsVal
+  jsWriteLit :: a -> String
+  jsWriteLit = jsWrite . toJsLit
 
-instance ToJsVal [Char] where
-  toJsVal = JsString
+instance ToJsLit [Char] where
+  toJsLit = JsString
 
-instance ToJsVal Integer where
-  toJsVal = JsNum . fromIntegral
+instance ToJsLit Integer where
+  toJsLit = JsNum . fromIntegral
 
 jsWrite :: Js j => j -> String
 jsWrite = wrapDocWrite . renderJs
