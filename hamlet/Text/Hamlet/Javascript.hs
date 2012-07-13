@@ -32,9 +32,9 @@ jhamletFile fp functionName contextName = do
 wrapFunction :: String -> String -> Q Exp -> Q Exp
 wrapFunction functionName contextName js = [|"function " ++ functionName ++ "(" ++ contextName ++ ") {" ++ $js ++ "}"|]
 
-docsToExp :: [Doc] -> Q Exp
-docsToExp docs = do
-  exps <- mapM docToExp docs
+docsToExp :: String -> [Doc] -> Q Exp
+docsToExp contextName docs = do
+  exps <- mapM (docToExp contextName) docs
   case exps of
     [] -> [|return ()|]
     [x] -> return x
