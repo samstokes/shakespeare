@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -7,7 +8,8 @@
 module Text.Hamlet.Javascript where
 
 import Text.Hamlet.Parse
-import Text.Shakespeare.Base (Deref(..), Ident(..))
+import Text.Shakespeare.Base (Deref(..), Ident(..), readUtf8File)
+import qualified Data.Text.Lazy as TL
 import Data.Monoid (mconcat)
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
