@@ -10,7 +10,7 @@ module Text.Hamlet.Javascript where
 import Text.Hamlet.Parse
 import Text.Shakespeare.Base (Deref(..), Ident(..), readUtf8File)
 import qualified Data.Text.Lazy as TL
-import Data.Monoid (mconcat)
+import Data.Monoid (mappend, mempty, mconcat)
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 
@@ -56,6 +56,24 @@ docsToExp opts docs = do
 
 docToExp :: JHamletOpts -> Doc -> Q Exp
 docToExp opts (DocContent c) = contentToExp opts c
+docToExp opts (DocCond conds final) = do
+    conds' <- mapM go conds
+    final' <- maybe [|mempty|] (docsToExp opts) final
+    mc <- [|mconcat|]
+    -- TODO actually evaluate and test the conditions!
+    return $ mc `AppE` ListE (conds' ++ [final'])
+  where
+    go :: (Deref, [Doc]) -> Q Exp
+    go (_, docs) = docsToExp opts docs -- TODO don't ignore derefs!
+docToExp opts (DocMaybe _ _ inside mno) = do
+    inside' <- docsToExp opts inside
+    ninside' <- case mno of
+      Nothing -> [|mempty|]
+      Just no -> docsToExp opts no
+    ma <- [|mappend|]
+    return $ ma `AppE` inside' `AppE` ninside'
+docToExp opts (DocForall _ _ inside) = [|mconcat $ replicate 5 $inside'|]
+  where inside' = docsToExp opts inside
 
 contentToExp :: JHamletOpts -> Content -> Q Exp
 contentToExp _ (ContentRaw s) = [|jsWriteLit s|]
