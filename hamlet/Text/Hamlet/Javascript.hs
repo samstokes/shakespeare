@@ -81,7 +81,7 @@ escapearoo = foldr1 (.) replacers
       ]
 
 replace :: Eq a => a -> [a] -> [a] -> [a]
-replace c rep s = reverse $ go c (reverse rep) s []
+replace char replacement string = reverse $ go char (reverse replacement) string []
   where
     go _ _ [] accum = accum
     go c rep (i : is) accum | c == i    = go c rep is $ rep ++ accum
