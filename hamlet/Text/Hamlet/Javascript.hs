@@ -14,43 +14,56 @@ import Data.Monoid (mconcat)
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 
-jhamlet :: QuasiQuoter
-jhamlet = QuasiQuoter { quoteExp = jhamletFromString "render" "context" }
 
-jhamletFromString :: String -> String -> String -> Q Exp
-jhamletFromString functionName contextName s = case parseDoc settings s of
+data JHamletOpts = JHamletOpts {
+    jhamletFunctionName :: String
+  , jhamletContextName :: String
+  }
+
+defaultJHamletOpts :: JHamletOpts
+defaultJHamletOpts = JHamletOpts "render" "context"
+
+
+jhamlet :: QuasiQuoter
+jhamlet = QuasiQuoter { quoteExp = jhamletFromString defaultJHamletOpts }
+
+jhamletFromString :: JHamletOpts -> String -> Q Exp
+jhamletFromString opts s = case parseDoc settings s of
     Error s' -> error s'
-    Ok d -> wrapFunction functionName contextName $ docsToExp contextName d
+    Ok d -> wrapFunction opts $ docsToExp opts d
   where settings = debugHamletSettings -- TODO
 
-jhamletFile :: FilePath -> String -> String -> Q Exp
-jhamletFile fp functionName contextName = do
+jhamletFile :: FilePath -> JHamletOpts -> Q Exp
+jhamletFile fp opts = do
 #ifdef GHC_7_4
     qAddDependentFile fp
 #endif
     contents <- fmap TL.unpack $ qRunIO $ readUtf8File fp
-    jhamletFromString functionName contextName contents
+    jhamletFromString opts contents
 
-wrapFunction :: String -> String -> Q Exp -> Q Exp
-wrapFunction functionName contextName js = [|"function " ++ functionName ++ "(" ++ contextName ++ ") {" ++ $js ++ "}"|]
+wrapFunction :: JHamletOpts -> Q Exp -> Q Exp
+wrapFunction opts js = [|"function " ++ functionName ++ "(" ++ contextName ++ ") {" ++ $js ++ "}"|]
+  where functionName = jhamletFunctionName opts
+        contextName = jhamletContextName opts
 
-docsToExp :: String -> [Doc] -> Q Exp
-docsToExp contextName docs = do
-  exps <- mapM (docToExp contextName) docs
+docsToExp :: JHamletOpts -> [Doc] -> Q Exp
+docsToExp opts docs = do
+  exps <- mapM (docToExp opts) docs
   case exps of
     [] -> [|return ()|]
     [x] -> return x
     _ -> [|mconcat $(return $ ListE exps)|]
 
-docToExp :: String -> Doc -> Q Exp
-docToExp contextName (DocContent c) = contentToExp contextName c
+docToExp :: JHamletOpts -> Doc -> Q Exp
+docToExp opts (DocContent c) = contentToExp opts c
 
-contentToExp :: String -> Content -> Q Exp
+contentToExp :: JHamletOpts -> Content -> Q Exp
 contentToExp _ (ContentRaw s) = [|jsWriteLit s|]
-contentToExp contextName (ContentVar d) = [|jsWrite $(derefToExp contextName d)|]
+contentToExp opts (ContentVar d) = [|jsWrite $(derefToExp opts d)|]
 
-derefToExp :: String -> Deref -> Q Exp
-derefToExp contextName (DerefIdent (Ident i)) = [|JsIdent $ contextName ++ "." ++ i|]
+derefToExp :: JHamletOpts -> Deref -> Q Exp
+derefToExp opts (DerefIdent (Ident i)) = [|JsIdent $ contextName ++ "." ++ i|]
+  where contextName = jhamletContextName opts
 derefToExp _ (DerefIntegral i) = [|toJsLit i|]
 derefToExp _ (DerefString s) = [|toJsLit s|]
 
