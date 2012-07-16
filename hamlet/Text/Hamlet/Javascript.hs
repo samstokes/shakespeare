@@ -113,7 +113,7 @@ class Js j where
   renderJs :: j -> String
 
 instance Js JsLit where
-  renderJs (JsString s) = jsQuote $ escapearoo s
+  renderJs (JsString s) = jsQuote $ escapeString s
   renderJs (JsNum n) = show n
 
 instance Js JsIdent where
@@ -143,14 +143,15 @@ instance Lift JsExp where
 
 
 -- TODO probably shouldn't write my own escaping function
-escapearoo :: String -> String
-escapearoo = foldr1 (.) replacers
-  where
-    replacers = map (uncurry replace) replacements
-    replacements = [
+escapeString :: String -> String
+escapeString = escape [
         ('"', "\\\"")
       , ('\n', "\\n")
       ]
+
+escape :: Eq a => [(a, [a])] -> [a] -> [a]
+escape replacements = foldr1 (.) replacers
+  where replacers = map (uncurry replace) replacements
 
 replace :: Eq a => a -> [a] -> [a] -> [a]
 replace char replacement string = reverse $ go char (reverse replacement) string []
