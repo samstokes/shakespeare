@@ -102,6 +102,7 @@ helperToExp opts (DerefModulesIdent modules (Ident i)) = lift $ foldl JsExpDot h
 
 data JsLit = JsString { unJsString :: String }
            | JsNum { unJsNum :: Float }
+newtype JsComment = JsComment { unJsComment :: String }
 newtype JsIdent = JsIdent { unJsIdent :: String }
 data JsExp =
     JsExpLit JsLit
@@ -111,6 +112,9 @@ data JsExp =
 
 class Js j where
   renderJs :: j -> String
+
+instance Js JsComment where
+  renderJs (JsComment s) = "/* " ++ escapeComment s ++ " */"
 
 instance Js JsLit where
   renderJs (JsString s) = jsQuote $ escapeString s
@@ -149,6 +153,11 @@ escapeString = escape [
       , ('\n', "\\n")
       ]
 
+escapeComment :: String -> String
+escapeComment = escape [
+    ('/', "\\/")
+  ]
+
 escape :: Eq a => [(a, [a])] -> [a] -> [a]
 escape replacements = foldr1 (.) replacers
   where replacers = map (uncurry replace) replacements
@@ -178,3 +187,6 @@ instance ToJsLit Integer where
 jsWrite :: Js j => j -> String
 jsWrite = wrapDocWrite . renderJs
   where wrapDocWrite = ("document.write(" ++) . (++ ");")
+
+jsWriteComment :: String -> String
+jsWriteComment = renderJs . JsComment
