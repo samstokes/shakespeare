@@ -92,6 +92,7 @@ derefToExp opts (DerefBranch d1 d2) = [|JsExpApp $(helperToExp opts d1) [$(deref
 helperToExp :: JHamletOpts -> Deref -> Q Exp
 helperToExp opts (DerefIdent (Ident i)) = [|JsExpDot helpersName (JsIdent i)|]
   where helpersName = JsExpIdent $ jhamletHelpersName opts
+helperToExp opts b@(DerefBranch _ _) = derefToExp opts b
 
 
 data JsLit = JsString { unJsString :: String }
