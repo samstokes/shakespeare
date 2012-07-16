@@ -7,6 +7,7 @@
 
 module Text.Hamlet.Javascript where
 
+import Data.List (intercalate)
 import Text.Hamlet.Parse
 import Text.Shakespeare.Base (Deref(..), Ident(..), readUtf8File)
 import qualified Data.Text.Lazy as TL
@@ -18,10 +19,11 @@ import Language.Haskell.TH.Syntax
 data JHamletOpts = JHamletOpts {
     jhamletFunctionName :: JsIdent
   , jhamletContextName :: JsIdent
+  , jhamletHelpersName :: JsIdent
   }
 
 defaultJHamletOpts :: JHamletOpts
-defaultJHamletOpts = JHamletOpts (JsIdent "render") (JsIdent "context")
+defaultJHamletOpts = JHamletOpts (JsIdent "render") (JsIdent "context") (JsIdent "helpers")
 
 
 jhamlet :: QuasiQuoter
@@ -42,9 +44,9 @@ jhamletFile fp opts = do
     jhamletFromString opts contents
 
 wrapFunction :: JHamletOpts -> Q Exp -> Q Exp
-wrapFunction opts js = [|"function " ++ functionName ++ "(" ++ contextName ++ ") {" ++ $js ++ "}"|]
+wrapFunction opts js = [|"function " ++ functionName ++ "(" ++ intercalate ", " params ++ ") {" ++ $js ++ "}"|]
   where functionName = renderJs $ jhamletFunctionName opts
-        contextName = renderJs $ jhamletContextName opts
+        params = map renderJs [jhamletContextName opts, jhamletHelpersName opts]
 
 docsToExp :: JHamletOpts -> [Doc] -> Q Exp
 docsToExp opts docs = do
