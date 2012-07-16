@@ -16,12 +16,12 @@ import Language.Haskell.TH.Syntax
 
 
 data JHamletOpts = JHamletOpts {
-    jhamletFunctionName :: String
-  , jhamletContextName :: String
+    jhamletFunctionName :: JsIdent
+  , jhamletContextName :: JsIdent
   }
 
 defaultJHamletOpts :: JHamletOpts
-defaultJHamletOpts = JHamletOpts "render" "context"
+defaultJHamletOpts = JHamletOpts (JsIdent "render") (JsIdent "context")
 
 
 jhamlet :: QuasiQuoter
@@ -43,8 +43,8 @@ jhamletFile fp opts = do
 
 wrapFunction :: JHamletOpts -> Q Exp -> Q Exp
 wrapFunction opts js = [|"function " ++ functionName ++ "(" ++ contextName ++ ") {" ++ $js ++ "}"|]
-  where functionName = jhamletFunctionName opts
-        contextName = jhamletContextName opts
+  where functionName = renderJs $ jhamletFunctionName opts
+        contextName = renderJs $ jhamletContextName opts
 
 docsToExp :: JHamletOpts -> [Doc] -> Q Exp
 docsToExp opts docs = do
@@ -81,7 +81,7 @@ contentToExp opts (ContentVar d) = [|jsWrite $(derefToExp opts d)|]
 
 derefToExp :: JHamletOpts -> Deref -> Q Exp
 derefToExp opts (DerefIdent (Ident i)) = [|JsIdent $ contextName ++ "." ++ i|]
-  where contextName = jhamletContextName opts
+  where contextName = renderJs $ jhamletContextName opts
 derefToExp _ (DerefIntegral i) = [|toJsLit i|]
 derefToExp _ (DerefString s) = [|toJsLit s|]
 
