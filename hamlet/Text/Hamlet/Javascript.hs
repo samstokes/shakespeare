@@ -93,6 +93,11 @@ helperToExp :: JHamletOpts -> Deref -> Q Exp
 helperToExp opts (DerefIdent (Ident i)) = [|JsExpDot helpersName (JsIdent i)|]
   where helpersName = JsExpIdent $ jhamletHelpersName opts
 helperToExp opts b@(DerefBranch _ _) = derefToExp opts b
+helperToExp opts (DerefModulesIdent modules (Ident i)) = lift $ foldl JsExpDot helpers (modules' ++ [i'])
+  where
+    helpers = JsExpIdent $ jhamletHelpersName opts
+    modules' = map JsIdent modules
+    i' = JsIdent i
 
 
 data JsLit = JsString { unJsString :: String }
