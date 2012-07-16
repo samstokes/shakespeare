@@ -86,6 +86,12 @@ derefToExp opts (DerefIdent (Ident i)) = [|JsExpDot contextName (JsIdent i)|]
   where contextName = JsExpIdent $ jhamletContextName opts
 derefToExp _ (DerefIntegral i) = [|JsExpLit $ toJsLit i|]
 derefToExp _ (DerefString s) = [|JsExpLit $ toJsLit s|]
+derefToExp opts (DerefBranch d1 d2) = [|JsExpApp $(helperToExp opts d1) [$(derefToExp opts d2)]|]
+
+
+helperToExp :: JHamletOpts -> Deref -> Q Exp
+helperToExp opts (DerefIdent (Ident i)) = [|JsExpDot helpersName (JsIdent i)|]
+  where helpersName = JsExpIdent $ jhamletHelpersName opts
 
 
 data JsLit = JsString { unJsString :: String }
@@ -95,6 +101,7 @@ data JsExp =
     JsExpLit JsLit
   | JsExpIdent JsIdent
   | JsExpDot { jsDotContext :: JsExp, jsDotName :: JsIdent }
+  | JsExpApp { jsAppFunction :: JsExp, jsAppArgs :: [JsExp] }
 
 class Js j where
   renderJs :: j -> String
@@ -110,6 +117,8 @@ instance Js JsExp where
   renderJs (JsExpLit lit) = renderJs lit
   renderJs (JsExpIdent ident) = renderJs ident
   renderJs (JsExpDot context name) = renderJs context ++ "." ++ renderJs name
+  renderJs (JsExpApp function args) = renderJs function ++ "(" ++ intercalate ", " params ++ ")"
+    where params = map renderJs args
 
 
 instance Lift JsIdent where
@@ -124,6 +133,7 @@ instance Lift JsExp where
   lift (JsExpLit lit) = [|JsExpLit lit|]
   lift (JsExpIdent ident) = [|JsExpIdent ident|]
   lift (JsExpDot context name) = [|JsExpDot context name|]
+  lift (JsExpApp function args) = [|JsExpApp function args|]
 
 
 -- TODO probably shouldn't write my own escaping function
