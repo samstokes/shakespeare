@@ -80,15 +80,19 @@ contentToExp _ (ContentRaw s) = [|jsWriteLit s|]
 contentToExp opts (ContentVar d) = [|jsWrite $(derefToExp opts d)|]
 
 derefToExp :: JHamletOpts -> Deref -> Q Exp
-derefToExp opts (DerefIdent (Ident i)) = [|JsIdent $ contextName ++ "." ++ i|]
-  where contextName = renderJs $ jhamletContextName opts
-derefToExp _ (DerefIntegral i) = [|toJsLit i|]
-derefToExp _ (DerefString s) = [|toJsLit s|]
+derefToExp opts (DerefIdent (Ident i)) = [|JsExpDot contextName (JsIdent i)|]
+  where contextName = JsExpIdent $ jhamletContextName opts
+derefToExp _ (DerefIntegral i) = [|JsExpLit $ toJsLit i|]
+derefToExp _ (DerefString s) = [|JsExpLit $ toJsLit s|]
 
 
 data JsLit = JsString { unJsString :: String }
            | JsNum { unJsNum :: Float }
 newtype JsIdent = JsIdent { unJsIdent :: String }
+data JsExp =
+    JsExpLit JsLit
+  | JsExpIdent JsIdent
+  | JsExpDot { jsDotContext :: JsExp, jsDotName :: JsIdent }
 
 class Js j where
   renderJs :: j -> String
@@ -99,6 +103,25 @@ instance Js JsLit where
 
 instance Js JsIdent where
   renderJs (JsIdent i) = i
+
+instance Js JsExp where
+  renderJs (JsExpLit lit) = renderJs lit
+  renderJs (JsExpIdent ident) = renderJs ident
+  renderJs (JsExpDot context name) = renderJs context ++ "." ++ renderJs name
+
+
+instance Lift JsIdent where
+  lift (JsIdent i) = [|JsIdent i|]
+
+instance Lift JsLit where
+  lift (JsString s) = [|JsString s|]
+  lift (JsNum n) = [|JsNum $ fromIntegral n'|]
+    where n' = floor n :: Integer -- TODO don't truncate all numbers!
+
+instance Lift JsExp where
+  lift (JsExpLit lit) = [|JsExpLit lit|]
+  lift (JsExpIdent ident) = [|JsExpIdent ident|]
+  lift (JsExpDot context name) = [|JsExpDot context name|]
 
 
 -- TODO probably shouldn't write my own escaping function
